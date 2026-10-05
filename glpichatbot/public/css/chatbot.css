@@ -1,0 +1,242 @@
+/* GLPI Chatbot - usa as variáveis do tema do GLPI (Tabler) para seguir claro/escuro e a cor da instância */
+.glpichatbot-launcher,
+.glpichatbot-panel {
+    --gcb-primary: var(--tblr-primary, #206bc4);
+    --gcb-primary-fg: var(--tblr-primary-fg, #fff);
+    --gcb-bg: var(--tblr-bg-surface, #fff);
+    --gcb-bg-soft: var(--tblr-bg-surface-secondary, #f6f8fb);
+    --gcb-border: var(--tblr-border-color, #dce1e7);
+    --gcb-text: var(--tblr-body-color, #1d273b);
+    --gcb-muted: var(--tblr-secondary, #667382);
+    --gcb-radius: 14px;
+    font-family: inherit;
+}
+
+/* Botão flutuante: compacto (só o ícone); o texto aparece ao passar o mouse */
+.glpichatbot-launcher {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1040;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    height: 48px;
+    min-width: 48px;
+    padding: 0 0.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--gcb-primary);
+    color: var(--gcb-primary-fg);
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    opacity: 0.92;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, bottom 0.2s ease, opacity 0.15s ease;
+}
+.glpichatbot-launcher:hover,
+.glpichatbot-launcher:focus-visible { opacity: 1; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25); }
+.glpichatbot-launcher:focus-visible { outline: 3px solid var(--gcb-border); outline-offset: 2px; }
+.glpichatbot-launcher-icon { font-size: 1.25rem; line-height: 1; }
+.glpichatbot-launcher-text {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width 0.2s ease, margin 0.2s ease;
+}
+.glpichatbot-launcher:hover .glpichatbot-launcher-text,
+.glpichatbot-launcher:focus-visible .glpichatbot-launcher-text { max-width: 140px; margin-left: 0.5rem; }
+.glpichatbot-launcher.is-open .glpichatbot-launcher-text { display: none; }
+
+/* Painel */
+.glpichatbot-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 84px;
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    width: 390px;
+    max-width: calc(100vw - 40px);
+    height: 600px;
+    max-height: calc(100vh - 110px);
+    background: var(--gcb-bg);
+    color: var(--gcb-text);
+    border: 1px solid var(--gcb-border);
+    border-radius: var(--gcb-radius);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+.glpichatbot-panel[hidden] { display: none; }
+
+.glpichatbot-header {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--gcb-primary);
+    color: var(--gcb-primary-fg);
+}
+.glpichatbot-title { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.glpichatbot-title small { opacity: 0.85; font-size: 0.75rem; }
+.glpichatbot-icon-btn {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.glpichatbot-icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* Mensagens */
+.glpichatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--gcb-bg-soft);
+}
+.glpichatbot-msg {
+    max-width: 85%;
+    padding: 0.55rem 0.8rem;
+    border-radius: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+.glpichatbot-msg-bot { align-self: flex-start; background: var(--gcb-bg); border: 1px solid var(--gcb-border); border-bottom-left-radius: 4px; }
+.glpichatbot-msg-user { align-self: flex-end; background: var(--gcb-primary); color: var(--gcb-primary-fg); border-bottom-right-radius: 4px; }
+.glpichatbot-msg-wait { opacity: 0.7; font-style: italic; }
+
+.glpichatbot-summary {
+    margin: 0;
+    padding: 0.7rem 0.8rem;
+    background: var(--gcb-bg);
+    border: 1px solid var(--gcb-border);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.7rem;
+    font-size: 0.85rem;
+}
+.glpichatbot-summary dt { font-weight: 600; color: var(--gcb-muted); }
+.glpichatbot-summary dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+/* Ações (botões / campo de texto) */
+.glpichatbot-actions {
+    padding: 0.7rem;
+    border-top: 1px solid var(--gcb-border);
+    background: var(--gcb-bg);
+    max-height: 45%;
+    overflow-y: auto;
+}
+.glpichatbot-choices { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.glpichatbot-choice {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.45rem 0.75rem;
+    border: 1.5px solid var(--gcb-primary);
+    border-radius: 10px;
+    background: var(--gcb-bg);
+    color: var(--gcb-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+.glpichatbot-choice small { color: var(--gcb-muted); font-weight: 400; font-size: 0.72rem; }
+.glpichatbot-choice:hover,
+.glpichatbot-choice:focus-visible { background: var(--gcb-primary); color: var(--gcb-primary-fg); text-decoration: none; }
+.glpichatbot-choice:hover small,
+.glpichatbot-choice:focus-visible small { color: inherit; opacity: 0.85; }
+.glpichatbot-choice-primary { background: var(--gcb-primary); color: var(--gcb-primary-fg); }
+.glpichatbot-choice-nav { border-color: var(--gcb-border); color: var(--gcb-muted); }
+.glpichatbot-choice[hidden] { display: none; }
+
+.glpichatbot-filter,
+.glpichatbot-field {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--gcb-border);
+    border-radius: 10px;
+    background: var(--gcb-bg);
+    color: var(--gcb-text);
+    font: inherit;
+    font-size: 0.9rem;
+}
+.glpichatbot-filter { margin-bottom: 0.5rem; }
+.glpichatbot-field:focus,
+.glpichatbot-filter:focus { outline: 2px solid var(--gcb-primary); outline-offset: -1px; }
+.glpichatbot-input { display: flex; gap: 0.4rem; align-items: flex-end; }
+.glpichatbot-input textarea { resize: vertical; min-height: 80px; }
+.glpichatbot-send {
+    padding: 0.5rem 0.9rem;
+    border: 0;
+    border-radius: 10px;
+    background: var(--gcb-primary);
+    color: var(--gcb-primary-fg);
+    font-weight: 600;
+    cursor: pointer;
+}
+.glpichatbot-error { color: var(--tblr-danger, #d63939); font-size: 0.8rem; margin-top: 0.3rem; }
+.glpichatbot-error:empty { display: none; }
+.glpichatbot-hint { color: var(--gcb-muted); font-size: 0.72rem; margin-top: 0.25rem; }
+.glpichatbot-hint:empty { display: none; }
+
+/* Celular: painel em tela cheia */
+@media (max-width: 576px) {
+    .glpichatbot-panel { right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+    .glpichatbot-launcher { right: 14px; bottom: 14px; }
+    .glpichatbot-launcher.is-open { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .glpichatbot-launcher { transition: none; }
+}
+
+/* Link "tela cheia" no cabeçalho com o mesmo visual dos botões */
+a.glpichatbot-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+a.glpichatbot-icon-btn:hover { color: inherit; }
+
+/* Tela dedicada (front/chatbot.php) */
+.glpichatbot-page-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+}
+.glpichatbot-panel.glpichatbot-panel-page {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    width: 100%;
+    max-width: 860px;
+    height: calc(100vh - 190px);
+    min-height: 520px;
+    max-height: none;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+.glpichatbot-panel-page .glpichatbot-messages { padding: 1.25rem; }
+.glpichatbot-panel-page .glpichatbot-msg { max-width: 75%; font-size: 0.95rem; }
+.glpichatbot-panel-page .glpichatbot-actions { max-height: 40%; padding: 0.9rem 1.1rem; }
+.glpichatbot-panel-page .glpichatbot-choice { font-size: 0.9rem; padding: 0.55rem 0.9rem; }
+
+@media (max-width: 576px) {
+    .glpichatbot-page-wrapper { padding: 0; }
+    .glpichatbot-panel.glpichatbot-panel-page { height: calc(100dvh - 120px); min-height: 0; border-radius: 0; }
+    .glpichatbot-panel-page .glpichatbot-msg { max-width: 90%; }
+}
