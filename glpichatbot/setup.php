@@ -38,9 +38,6 @@ function plugin_init_glpichatbot()
 
     $PLUGIN_HOOKS['csrf_compliant']['glpichatbot'] = true;
 
-    // Redireciona a tela inicial do solicitante (autoatendimento) para o chatbot
-    $PLUGIN_HOOKS['post_init']['glpichatbot'] = 'plugin_glpichatbot_post_init';
-
     // Carregado em todas as telas; o próprio script só mostra o assistente
     // para usuários logados que podem abrir chamados.
     $PLUGIN_HOOKS['add_javascript']['glpichatbot'] = ['js/chatbot.js'];
@@ -97,29 +94,3 @@ function plugin_glpichatbot_uninstall()
     return true;
 }
 
-/**
- * Hook disparado após a inicialização do GLPI.
- * Redireciona usuários da interface de autoatendimento (solicitantes)
- * que acessam a página inicial para a tela do chatbot.
- */
-function plugin_glpichatbot_post_init()
-{
-    // Apenas para a interface simplificada (solicitante) e se puder criar chamados
-    if (Session::getCurrentInterface() === 'helpdesk' && Session::haveRight('ticket', CREATE)) {
-        $uri = $_SERVER['REQUEST_URI'] ?? '';
-        $path = parse_url($uri, PHP_URL_PATH) ?: '';
-        
-        $base = defined('GLPI_ROOT') ? rtrim(parse_url(Toolbox::getSiteUrl(), PHP_URL_PATH), '/') : '';
-        if ($base !== '') {
-            $path = preg_replace('#^' . preg_quote($base, '#') . '#', '', $path);
-        }
-
-        // Se acessar a raiz ou as páginas centrais sem parâmetros (como ?id=)
-        if (
-            preg_match('#^(/|/index\.php|/front/central\.php|/front/helpdesk\.php|/Helpdesk|/front/helpdesk\.public\.php)$#i', $path)
-            && empty($_GET)
-        ) {
-            Html::redirect($base . '/plugins/glpichatbot/front/chatbot.php');
-        }
-    }
-}

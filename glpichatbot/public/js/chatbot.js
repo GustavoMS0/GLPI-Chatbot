@@ -621,6 +621,25 @@
         }
         if (!boot.can_create) return;
 
+        // Auto-redirect para a tela dedicada na interface de autoatendimento
+        if (!pageContainer && boot.interface === 'helpdesk') {
+            const loc = window.location.pathname;
+            const noParams = window.location.search === '';
+            const baseDir = BASE.replace(/\/plugins\/glpichatbot$/, '');
+            const isHome = loc === baseDir + '/' 
+                        || loc.endsWith('/index.php') 
+                        || loc.endsWith('/front/central.php') 
+                        || loc.endsWith('/front/helpdesk.php') 
+                        || loc.endsWith('/Helpdesk')
+                        || loc.endsWith('/front/helpdesk.public.php');
+            
+            if (isHome && noParams && PAGE_URL && loc !== PAGE_URL) {
+                document.body.style.display = 'none'; // previne piscar o fundo
+                window.location.replace(PAGE_URL);
+                return;
+            }
+        }
+
         if (pageContainer) {
             buildUI('page', pageContainer);
             start();

@@ -28,6 +28,7 @@ usort($entities, static fn($a, $b) => strnatcasecmp($a['name'], $b['name']));
 plugin_glpichatbot_json([
     'user'           => (string) ($_SESSION['glpifirstname'] ?? '') !== '' ? $_SESSION['glpifirstname'] : $_SESSION['glpiname'],
     'can_create'     => Session::haveRight('ticket', CREATE),
+    'interface'      => Session::getCurrentInterface(),
     'entities'       => $entities,
     'default_entity' => (int) $_SESSION['glpiactive_entity'],
     'ticket_url'     => $CFG_GLPI['root_doc'] . '/front/ticket.form.php?id=',
