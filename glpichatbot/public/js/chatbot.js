@@ -22,6 +22,7 @@
         bootstrap: BASE + '/ajax/bootstrap.php',
         categories: BASE + '/ajax/categories.php',
         create: BASE + '/ajax/create.php',
+        mytickets: BASE + '/ajax/mytickets.php',
     };
     const PAGE_URL = BASE + '/front/chatbot.php';
     const TYPE_LABELS = { 1: 'Problema', 2: 'Solicitação' };
@@ -56,7 +57,12 @@
             throw new Error('Resposta inesperada (HTTP ' + response.status + ')');
         }
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'HTTP ' + response.status);
+        if (!response.ok) {
+            let msg = data.error;
+            if (msg === true && data.message) msg = data.message;
+            else if (msg === true) msg = JSON.stringify(data);
+            throw new Error(msg || 'HTTP ' + response.status);
+        }
         return data;
     }
 
@@ -75,7 +81,11 @@
         });
         let data = {};
         try { data = await response.json(); } catch (e) { /* resposta não JSON */ }
-        if (!response.ok) throw new Error(data.error || 'Não foi possível abrir o chamado (HTTP ' + response.status + ').');
+        if (!response.ok) {
+            let msg = data.error;
+            if (msg === true && data.message) msg = data.message;
+            throw new Error(msg || 'Não foi possível abrir o chamado (HTTP ' + response.status + ').');
+        }
         return data;
     }
 
@@ -365,8 +375,81 @@
         state = { type: 0, entity: boot.default_entity, category: 0, title: '', description: '', urgency: 0, editing: false };
         tree = null;
         ui.messages.replaceChildren();
-        bot('Olá, ' + boot.user + '! 👋 Vou te ajudar a abrir um chamado.');
-        askType();
+        bot('Olá, ' + boot.user + '! 👋 Como posso te ajudar hoje?');
+        askIntent();
+    }
+
+    function askIntent() {
+        choices([
+            { label: '🆕 Abrir um chamado', hint: 'relatar problema ou fazer solicitação', value: 'create' },
+            { label: '🔍 Consultar meus chamados', hint: 'ver chamados em andamento', value: 'list' },
+        ], (intent) => {
+            if (intent === 'create') askType();
+            else listTickets();
+        });
+    }
+
+    async function listTickets() {
+        const waiting = bot('Buscando seus chamados abertos…');
+        waiting.classList.add('glpichatbot-msg-wait');
+        try {
+            const list = await getJSON(URLS.mytickets);
+            waiting.remove();
+            
+            if (list.length === 0) {
+                bot('Você não tem nenhum chamado em andamento no momento. 🎉');
+                choices([
+                    { label: '🆕 Abrir um chamado', value: 'create' },
+                    { label: '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
+                ], (value) => {
+                    if (value === 'create') askType();
+                    else cancel('Tudo bem. Quando precisar, é só me chamar. 🙂');
+                });
+                return;
+            }
+
+            bot('Aqui estão seus últimos chamados em andamento:');
+            
+            const card = el('div', 'glpichatbot-tickets-list');
+            list.forEach((t) => {
+                const item = el('a', 'glpichatbot-ticket-item');
+                item.href = boot.ticket_url + encodeURIComponent(t.id);
+                item.target = '_blank';
+                
+                const header = el('div', 'glpichatbot-ticket-header');
+                header.append(
+                    el('strong', null, '#' + t.id),
+                    el('span', 'glpichatbot-ticket-status', t.status_name)
+                );
+                
+                const title = el('div', 'glpichatbot-ticket-title', t.name);
+                const date = el('div', 'glpichatbot-ticket-date', 'Aberto em: ' + t.date_short);
+                
+                item.append(header, title, date);
+                card.append(item);
+            });
+            ui.messages.append(card);
+            scrollDown();
+
+            choices([
+                { label: '🆕 Abrir um novo chamado', value: 'create' },
+                { label: '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
+            ], (value) => {
+                if (value === 'create') askType();
+                else cancel('Pronto. Quando precisar de algo, é só me chamar. 🙂');
+            });
+
+        } catch (e) {
+            waiting.remove();
+            bot('Não consegui buscar seus chamados. Erro: ' + e.message);
+            choices([
+                { label: 'Tentar novamente', value: 'retry' },
+                { label: '⬅ Voltar', value: 'back', className: 'glpichatbot-choice-nav' },
+            ], (value) => {
+                if (value === 'retry') listTickets();
+                else start();
+            });
+        }
     }
 
     function askType() {
@@ -549,9 +632,9 @@
         });
     }
 
-    function cancel() {
-        bot('Tudo bem, nada foi aberto. Quando precisar, é só me chamar. 🙂');
-        choices([{ label: 'Abrir um chamado', value: 'restart' }], start);
+    function cancel(customMsg) {
+        bot(typeof customMsg === 'string' ? customMsg : 'Tudo bem, nada foi aberto. Quando precisar, é só me chamar. 🙂');
+        choices([{ label: 'Início', value: 'restart' }], start);
     }
 
     async function submit() {
@@ -624,7 +707,7 @@
         // Auto-redirect para a tela dedicada na interface de autoatendimento
         if (!pageContainer && boot.interface === 'helpdesk') {
             const loc = window.location.pathname;
-            const noParams = window.location.search === '';
+            const search = window.location.search;
             const baseDir = BASE.replace(/\/plugins\/glpichatbot$/, '');
             const isHome = loc === baseDir + '/' 
                         || loc.endsWith('/index.php') 
@@ -633,7 +716,8 @@
                         || loc.endsWith('/Helpdesk')
                         || loc.endsWith('/front/helpdesk.public.php');
             
-            if (isHome && noParams && PAGE_URL && loc !== PAGE_URL) {
+            // Redireciona se for a home e não tiver o parâmetro de bypass
+            if (isHome && !search.includes('no_chatbot=1')) {
                 document.body.style.display = 'none'; // previne piscar o fundo
                 window.location.replace(PAGE_URL);
                 return;
