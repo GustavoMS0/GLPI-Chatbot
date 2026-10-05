@@ -55,9 +55,9 @@ Pronto. O botão **💬 Abrir chamado** aparece no canto inferior direito.
 ```bash
 cd /var/www/glpi/plugins            # ajuste para o caminho do seu GLPI
 VERSAO=$(curl -fsSL https://api.github.com/repos/GustavoMS0/GLPI-Chatbot/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
-curl -fsSL -o glpichatbot.zip "https://github.com/GustavoMS0/GLPI-Chatbot/releases/download/v$VERSAO/glpichatbot-$VERSAO.zip"
-unzip -o glpichatbot.zip && rm glpichatbot.zip
-chown -R root:root glpichatbot
+sudo curl -fsSL -o glpichatbot.zip "https://github.com/GustavoMS0/GLPI-Chatbot/releases/download/v$VERSAO/glpichatbot-$VERSAO.zip"
+sudo unzip -o glpichatbot.zip && rm glpichatbot.zip
+sudo chown -R root:root glpichatbot
 
 sudo -u www-data php ../bin/console plugin:install --username=glpi glpichatbot
 sudo -u www-data php ../bin/console plugin:activate glpichatbot
