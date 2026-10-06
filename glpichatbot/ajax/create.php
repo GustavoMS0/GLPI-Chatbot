@@ -85,33 +85,13 @@ if (!$id) {
     return;
 }
 
-// Anexo enviado pelo assistente
-if (!empty($_FILES['file']) && is_uploaded_file($_FILES['file']['tmp_name']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-    try {
-        $doc = new Document();
-        $doc_id = 0;
-        if (method_exists('Document', 'uploadDocument')) {
-            $doc_id = (int) Document::uploadDocument($entity, $_FILES['file']);
-        }
-        if (!$doc_id) {
-            $doc_id = (int) $doc->add([
-                'name'        => $_FILES['file']['name'],
-                'entities_id' => $entity,
-                '_filename'   => [$_FILES['file']['name']],
-            ]);
-        }
-        if ($doc_id > 0) {
-            $doc_item = new Document_Item();
-            $doc_item->add([
-                'documents_id' => $doc_id,
-                'itemtype'     => 'Ticket',
-                'items_id'     => $id,
-                'entities_id'  => $entity,
-            ]);
-        }
-    } catch (\Throwable $e) {
-        // Anexo opcional: não interrompe a abertura do chamado se falhar
+// Anexo enviado pelo assistente (opcional): se falhar, o chamado continua aberto e o usuário é avisado
+$response = ['id' => (int) $id];
+if (($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+    $anexo = plugin_glpichatbot_attach((int) $id, $entity, $_FILES['file']);
+    if ($anexo !== true) {
+        $response['warning'] = "O chamado foi aberto, mas o anexo não foi salvo: {$anexo}. Você pode anexar o arquivo direto no chamado.";
     }
 }
 
-plugin_glpichatbot_json(['id' => (int) $id], 201);
+plugin_glpichatbot_json($response, 201);

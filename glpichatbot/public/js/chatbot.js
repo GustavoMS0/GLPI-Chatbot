@@ -653,7 +653,7 @@
             }
             const result = await postForm(URLS.create, formData);
             waiting.remove();
-            done(result.id);
+            done(result.id, result.warning);
         } catch (e) {
             waiting.remove();
             bot('Não consegui abrir o chamado: ' + e.message);
@@ -669,8 +669,9 @@
         }
     }
 
-    function done(id) {
+    function done(id, warning) {
         bot('✅ Pronto! Seu chamado #' + id + ' foi aberto e já foi encaminhado para a equipe responsável. Você vai receber as atualizações por aqui e por e-mail.');
+        if (warning) bot('⚠️ ' + warning);
         clearActions();
         const list = el('div', 'glpichatbot-choices');
         const link = el('a', 'glpichatbot-choice glpichatbot-choice-primary', 'Ver chamado #' + id);

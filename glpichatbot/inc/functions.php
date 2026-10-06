@@ -127,3 +127,70 @@ function plugin_glpichatbot_categories(int $entity, int $type): array
 
     return $nodes;
 }
+
+/**
+ * Anexa ao chamado o arquivo enviado pelo assistente ($_FILES['file']).
+ *
+ * O arquivo vai para a pasta temporária do GLPI e o próprio GLPI cria o documento:
+ * confere o tipo (Configurar › Listas suspensas › Tipos de documento), calcula o
+ * checksum e guarda em files/. Retorna true ou a mensagem de erro para o usuário.
+ *
+ * @return true|string
+ */
+function plugin_glpichatbot_attach(int $tickets_id, int $entity, array $file)
+{
+    global $CFG_GLPI;
+
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+        return 'o arquivo não chegou ao servidor (pode ser maior que o limite de upload do PHP)';
+    }
+    $max_mb = (int) ($CFG_GLPI['document_max_size'] ?? 0);
+    if ($max_mb > 0 && (int) $file['size'] > $max_mb * 1024 * 1024) {
+        return "o arquivo passa do tamanho máximo de {$max_mb} MB";
+    }
+
+    // Nome sem caminho nem caracteres que o sistema de arquivos não aceita
+    $name = trim((string) preg_replace('#[\\\\/:*?"<>|\x00-\x1F]+#u', '_', basename((string) $file['name'])));
+    if ($name === '' || $name === '.' || $name === '..') {
+        $name = 'anexo';
+    }
+    $prefix = bin2hex(random_bytes(6)) . '_';
+    $tmp    = GLPI_TMP_DIR . '/' . $prefix . $name;
+    if (!move_uploaded_file($file['tmp_name'], $tmp)) {
+        return 'não foi possível gravar o arquivo no servidor';
+    }
+
+    $doc    = new Document();
+    $doc_id = (int) $doc->add([
+        'name'             => $name,
+        'entities_id'      => $entity,
+        '_filename'        => [$prefix . $name],
+        '_prefix_filename' => [$prefix],
+    ]);
+    if (is_file($tmp)) {
+        @unlink($tmp);
+    }
+    if ($doc_id <= 0 || empty($doc->fields['filepath'])) {
+        if ($doc_id > 0) {
+            $doc->delete(['id' => $doc_id], true);
+        }
+        // Repassa o motivo que o GLPI deu (ex.: tipo de arquivo não permitido)
+        $motivos = [];
+        foreach ($_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [] as $type_messages) {
+            foreach ((array) $type_messages as $message) {
+                $motivos[] = trim(html_entity_decode(strip_tags((string) $message), ENT_QUOTES, 'UTF-8'));
+            }
+        }
+        $_SESSION['MESSAGE_AFTER_REDIRECT'] = [];
+        return $motivos !== [] ? implode(' ', array_unique($motivos)) : 'o GLPI não aceitou o arquivo';
+    }
+
+    // Vínculo separado: criando o documento já vinculado, o GLPI troca o nome pelo do chamado
+    (new Document_Item())->add([
+        'documents_id' => $doc_id,
+        'itemtype'     => 'Ticket',
+        'items_id'     => $tickets_id,
+        'entities_id'  => $entity,
+    ]);
+    return true;
+}

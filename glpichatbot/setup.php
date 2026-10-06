@@ -50,9 +50,16 @@ function plugin_init_glpichatbot()
     $PLUGIN_HOOKS['helpdesk_menu_entry']['glpichatbot']      = '/front/chatbot.php';
     $PLUGIN_HOOKS['helpdesk_menu_entry_icon']['glpichatbot'] = 'ti ti-message-chatbot';
 
-    // Se a sessão já existia sem a entrada de menu do chatbot, força o GLPI a recarregar o menu
-    if (isset($_SESSION['glpimenu']) && !isset($_SESSION['glpimenu']['helpdesk']['content']['pluginglpichatbotmenu'])) {
+    // Se a sessão já existia sem a entrada de menu do chatbot, força o GLPI a recarregar o menu.
+    // Só uma vez por sessão: para quem não pode abrir chamados a entrada nunca existe, e o menu
+    // seria refeito em toda página.
+    if (
+        isset($_SESSION['glpimenu'])
+        && empty($_SESSION['glpichatbot_menu_refreshed'])
+        && !isset($_SESSION['glpimenu']['helpdesk']['content']['pluginglpichatbotmenu'])
+    ) {
         unset($_SESSION['glpimenu']);
+        $_SESSION['glpichatbot_menu_refreshed'] = true;
     }
 }
 
