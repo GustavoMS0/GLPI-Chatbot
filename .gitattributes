@@ -4,3 +4,6 @@
 *.css text eol=lf
 *.md text eol=lf
 *.yml text eol=lf
+*.po text eol=lf
+*.pot text eol=lf
+*.mo binary

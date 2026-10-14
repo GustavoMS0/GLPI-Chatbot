@@ -10,7 +10,8 @@
  * This file is part of GLPI Chatbot (GPLv3+).
  */
 
-include ('../../../inc/includes.php');
+// GLPI 11 inicializa o ambiente (sessão, autoload, CSRF) antes de executar os
+// arquivos front/ e ajax/ dos plugins: não é preciso incluir inc/includes.php.
 
 Session::checkLoginUser();
 

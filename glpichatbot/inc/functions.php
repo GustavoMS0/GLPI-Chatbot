@@ -21,6 +21,74 @@ function plugin_glpichatbot_json(array $data, int $status = 200): void
 }
 
 /**
+ * Opções do plugin (Configurar › Plugins › GLPI Chatbot). Opções ainda não
+ * gravadas (ex.: atualização sem reinstalar) assumem o valor padrão.
+ *
+ * @return array{force_selfservice_redirect:bool}
+ */
+function plugin_glpichatbot_config(): array
+{
+    $values = Config::getConfigurationValues('plugin:glpichatbot');
+    return [
+        'force_selfservice_redirect' => (bool) ($values['force_selfservice_redirect'] ?? 1),
+    ];
+}
+
+/**
+ * Urgências (1 a 5) que podem ser escolhidas, conforme Configurar › Geral ›
+ * Assistência › "Urgências permitidas" ($CFG_GLPI['urgency_mask']).
+ *
+ * @return int[]
+ */
+function plugin_glpichatbot_urgencies(): array
+{
+    /** @var array $CFG_GLPI */
+    global $CFG_GLPI;
+
+    $mask    = (int) ($CFG_GLPI['urgency_mask'] ?? 0);
+    $allowed = [];
+    for ($urgency = 1; $urgency <= 5; $urgency++) {
+        // A urgência média (3) é sempre permitida pelo GLPI
+        if ($urgency === 3 || ($mask & (1 << $urgency))) {
+            $allowed[] = $urgency;
+        }
+    }
+    return $allowed;
+}
+
+/**
+ * Mensagens que o GLPI guarda para mostrar após o redirecionamento.
+ * Usado para separar as mensagens geradas por uma operação do assistente
+ * das que já estavam na sessão (que devem continuar lá).
+ */
+function plugin_glpichatbot_messages_snapshot(): array
+{
+    return $_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [];
+}
+
+/**
+ * Tira da sessão as mensagens geradas desde $snapshot (restaurando as que já
+ * existiam) e as devolve como texto simples.
+ *
+ * @return string[]
+ */
+function plugin_glpichatbot_messages_since(array $snapshot): array
+{
+    $new = [];
+    foreach ($_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [] as $level => $type_messages) {
+        $before = array_values((array) ($snapshot[$level] ?? []));
+        foreach (array_values((array) $type_messages) as $i => $message) {
+            if (isset($before[$i]) && $before[$i] === $message) {
+                continue; // já estava na sessão antes da operação
+            }
+            $new[] = trim(html_entity_decode(strip_tags((string) $message), ENT_QUOTES, 'UTF-8'));
+        }
+    }
+    $_SESSION['MESSAGE_AFTER_REDIRECT'] = $snapshot;
+    return array_values(array_unique(array_filter($new, static fn($m) => $m !== '')));
+}
+
+/**
  * Entidade solicitada, se o usuário tiver acesso a ela; senão, a entidade ativa.
  */
 function plugin_glpichatbot_entity($requested): int
@@ -160,8 +228,9 @@ function plugin_glpichatbot_attach(int $tickets_id, int $entity, array $file)
         return 'não foi possível gravar o arquivo no servidor';
     }
 
-    $doc    = new Document();
-    $doc_id = (int) $doc->add([
+    $snapshot = plugin_glpichatbot_messages_snapshot();
+    $doc      = new Document();
+    $doc_id   = (int) $doc->add([
         'name'             => $name,
         'entities_id'      => $entity,
         '_filename'        => [$prefix . $name],
@@ -175,22 +244,24 @@ function plugin_glpichatbot_attach(int $tickets_id, int $entity, array $file)
             $doc->delete(['id' => $doc_id], true);
         }
         // Repassa o motivo que o GLPI deu (ex.: tipo de arquivo não permitido)
-        $motivos = [];
-        foreach ($_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [] as $type_messages) {
-            foreach ((array) $type_messages as $message) {
-                $motivos[] = trim(html_entity_decode(strip_tags((string) $message), ENT_QUOTES, 'UTF-8'));
-            }
-        }
-        $_SESSION['MESSAGE_AFTER_REDIRECT'] = [];
-        return $motivos !== [] ? implode(' ', array_unique($motivos)) : 'o GLPI não aceitou o arquivo';
+        $motivos = plugin_glpichatbot_messages_since($snapshot);
+        return $motivos !== [] ? implode(' ', $motivos) : 'o GLPI não aceitou o arquivo';
     }
 
     // Vínculo separado: criando o documento já vinculado, o GLPI troca o nome pelo do chamado
-    (new Document_Item())->add([
+    $link_id = (new Document_Item())->add([
         'documents_id' => $doc_id,
         'itemtype'     => 'Ticket',
         'items_id'     => $tickets_id,
         'entities_id'  => $entity,
     ]);
+    $motivos = plugin_glpichatbot_messages_since($snapshot);
+    if (!$link_id) {
+        // Documento sem vínculo ficaria órfão: remove
+        $doc->delete(['id' => $doc_id], true);
+        return $motivos !== []
+            ? 'não foi possível vincular o arquivo ao chamado (' . implode(' ', $motivos) . ')'
+            : 'não foi possível vincular o arquivo ao chamado';
+    }
     return true;
 }

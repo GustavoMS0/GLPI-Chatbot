@@ -395,7 +395,7 @@
         try {
             const list = await getJSON(URLS.mytickets);
             waiting.remove();
-            
+
             if (list.length === 0) {
                 bot('Você não tem nenhum chamado em andamento no momento. 🎉');
                 choices([
@@ -409,22 +409,22 @@
             }
 
             bot('Aqui estão seus últimos chamados em andamento:');
-            
+
             const card = el('div', 'glpichatbot-tickets-list');
             list.forEach((t) => {
                 const item = el('a', 'glpichatbot-ticket-item');
                 item.href = boot.ticket_url + encodeURIComponent(t.id);
                 item.target = '_blank';
-                
+
                 const header = el('div', 'glpichatbot-ticket-header');
                 header.append(
                     el('strong', null, '#' + t.id),
                     el('span', 'glpichatbot-ticket-status', t.status_name)
                 );
-                
+
                 const title = el('div', 'glpichatbot-ticket-title', t.name);
                 const date = el('div', 'glpichatbot-ticket-date', 'Aberto em: ' + t.date_short);
-                
+
                 item.append(header, title, date);
                 card.append(item);
             });
@@ -578,7 +578,10 @@
 
     function askUrgency() {
         bot('Qual a urgência?');
-        choices(URGENCIES, (urgency) => {
+        // Só as urgências permitidas na configuração do GLPI (urgency_mask)
+        const allowed = Array.isArray(boot.urgencies) ? boot.urgencies : [];
+        const options = URGENCIES.filter((u) => allowed.includes(u.value));
+        choices(options.length ? options : URGENCIES.filter((u) => u.value === 3), (urgency) => {
             state.urgency = urgency;
             summary();
         });
@@ -706,17 +709,18 @@
         if (!boot.can_create) return;
 
         // Auto-redirect para a tela dedicada na interface de autoatendimento
-        if (!pageContainer && boot.interface === 'helpdesk') {
+        // (opção "Abrir o assistente como página inicial do autoatendimento")
+        if (!pageContainer && boot.force_redirect && boot.interface === 'helpdesk') {
             const loc = window.location.pathname;
             const search = window.location.search;
             const baseDir = BASE.replace(/\/plugins\/glpichatbot$/, '');
-            const isHome = loc === baseDir + '/' 
-                        || loc.endsWith('/index.php') 
-                        || loc.endsWith('/front/central.php') 
-                        || loc.endsWith('/front/helpdesk.php') 
+            const isHome = loc === baseDir + '/'
+                        || loc.endsWith('/index.php')
+                        || loc.endsWith('/front/central.php')
+                        || loc.endsWith('/front/helpdesk.php')
                         || loc.endsWith('/Helpdesk')
                         || loc.endsWith('/front/helpdesk.public.php');
-            
+
             // Redireciona se for a home e não tiver o parâmetro de bypass
             if (isHome && !search.includes('no_chatbot=1')) {
                 document.body.style.display = 'none'; // previne piscar o fundo

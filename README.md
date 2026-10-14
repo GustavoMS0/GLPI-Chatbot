@@ -31,11 +31,13 @@
 - **Categorias certas para cada pessoa:** usa as mesmas regras do GLPI (entidade, "visível na interface simplificada" e tipo incidente ou requisição). Em um **problema**, só aparecem categorias de incidente.
 - **"Outro assunto de..."** quando nenhuma opção serve: o chamado vai para a categoria do nível atual (por exemplo *TI › Impressoras*), sem ficar sem dono.
 - **Matriz e filiais:** se a pessoa tem acesso a mais de uma unidade, o assistente pergunta para qual é o chamado.
+- **Consultar meus chamados:** o assistente lista os até 10 chamados em andamento (não solucionados nem fechados) em que a pessoa é requerente, com link para cada um.
+- **Autoatendimento abre direto no assistente** (opcional, ligado por padrão): a página inicial do perfil de autoatendimento leva à tela dedicada. Veja [Configuração](#configuração).
 - **Resumo antes de abrir**, com a opção de **corrigir** só o campo errado.
 - **Chamado aberto como o próprio usuário:** regras de negócio, atribuição automática pela categoria, modelos de chamado e notificações por e-mail funcionam normalmente.
 - **Seguro:** os endpoints exigem login, o envio é protegido pelo token CSRF do GLPI, a categoria é validada no servidor e o texto digitado nunca é interpretado como HTML.
 - **Visual do GLPI:** usa as cores do tema da instância (claro ou escuro) e ocupa a tela inteira no celular.
-- **Não altera o banco de dados:** instalar ou remover o plugin não cria nem apaga nada.
+- **Não cria tabelas:** o plugin guarda só a sua opção de configuração na configuração do GLPI, e a remove ao ser desinstalado.
 
 ---
 
@@ -65,6 +67,20 @@ sudo -u www-data php ../bin/console plugin:activate glpichatbot
 
 ---
 
+## Configuração
+
+Em **Configurar › Plugins**, clique no nome (ou no ícone de chave) do **GLPI Chatbot**:
+
+| Opção | Padrão | O que faz |
+|---|---|---|
+| **Abrir o assistente como página inicial do autoatendimento** | Ligada | Quem usa o perfil de autoatendimento é levado da página inicial direto para a tela do assistente. Desligue para manter a página inicial normal do GLPI; o botão flutuante e a tela dedicada continuam disponíveis. |
+
+Com a opção ligada, ainda dá para abrir a página inicial normal acrescentando `?no_chatbot=1` ao endereço (por exemplo, `/front/helpdesk.public.php?no_chatbot=1`).
+
+A opção precisa da permissão de **atualizar a configuração** (Configurar › Geral). Ela fica gravada na configuração do GLPI (`glpi_configs`, contexto `plugin:glpichatbot`); quem atualiza a partir da 1.1.0 sem reinstalar o plugin continua com a opção ligada.
+
+---
+
 ## Para o assistente funcionar bem
 
 O assistente mostra **as categorias que já existem no seu GLPI**. Para uma boa experiência:
@@ -89,6 +105,12 @@ Não. Ele é criado pelo mesmo mecanismo do GLPI, com o usuário como requerente
 
 **E se a categoria tiver um modelo de chamado com campos obrigatórios?**
 O GLPI valida normalmente. Se faltar algum campo que o assistente não pergunta, ele mostra a mensagem do GLPI e oferece **Corrigir** ou **Cancelar**. Nesse caso, use o formulário padrão para essa categoria.
+
+**Como a pessoa vê os chamados que já abriu?**
+No início da conversa, a opção **🔍 Consultar meus chamados** mostra os até 10 mais recentes em andamento em que ela é requerente (do mais novo para o mais antigo), com o status e um link para cada um. Chamados solucionados, fechados ou na lixeira não aparecem.
+
+**Dá para desligar o redirecionamento do autoatendimento para o assistente?**
+Sim, em **Configurar › Plugins › GLPI Chatbot**. Veja [Configuração](#configuração).
 
 **Dá para anexar arquivos?**
 Sim! O assistente conta com a etapa de anexos para envio de imagens, prints, documentos e PDFs, vinculados diretamente ao chamado no GLPI. Além disso, após a abertura é possível anexar arquivos adicionais pelo acompanhamento no link **Ver chamado**.

@@ -4,7 +4,8 @@
  * GET ajax/bootstrap.php
  *
  * Dados iniciais do assistente: nome do usuário, se ele pode abrir chamados
- * e as entidades (matriz/filiais) disponíveis para ele.
+ * e as entidades (matriz/filiais) disponíveis para ele, além das
+ * urgências permitidas e das opções do plugin.
  *
  * This file is part of GLPI Chatbot (GPLv3+).
  */
@@ -32,4 +33,6 @@ plugin_glpichatbot_json([
     'entities'       => $entities,
     'default_entity' => (int) $_SESSION['glpiactive_entity'],
     'ticket_url'     => $CFG_GLPI['root_doc'] . '/front/ticket.form.php?id=',
+    'urgencies'      => plugin_glpichatbot_urgencies(),
+    'force_redirect' => plugin_glpichatbot_config()['force_selfservice_redirect'],
 ]);

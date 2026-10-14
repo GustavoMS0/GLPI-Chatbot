@@ -1,0 +1,22 @@
+# GLPI Chatbot - modelo de tradução (domínio "glpichatbot").
+# Copyright (C) 2026 G. Martins
+# This file is distributed under the same license as the GLPI Chatbot package (GPLv3+).
+#
+# Esqueleto inicial: os textos do plugin ainda estão em português no código-fonte.
+# Ao envolver um texto com __('...', 'glpichatbot'), acrescente-o aqui e gere os
+# arquivos <idioma>.po / <idioma>.mo nesta pasta (ex.: en_GB.po, en_GB.mo).
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: GLPI Chatbot\n"
+"Report-Msgid-Bugs-To: https://github.com/GustavoMS0/GLPI-Chatbot/issues\n"
+"POT-Creation-Date: 2026-10-14 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"

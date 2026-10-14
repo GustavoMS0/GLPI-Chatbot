@@ -46,7 +46,7 @@ if (mb_strlen($title) < 3 || mb_strlen($title) > 250) {
 if (mb_strlen($description) < 3 || mb_strlen($description) > 20000) {
     $errors[] = 'A descrição precisa ter entre 3 e 20.000 caracteres.';
 }
-if ($urgency < 1 || $urgency > 5) {
+if (!in_array($urgency, plugin_glpichatbot_urgencies(), true)) {
     $errors[] = 'Urgência inválida.';
 }
 if ($errors !== []) {
@@ -58,8 +58,9 @@ if ($errors !== []) {
 $content = '<p>' . nl2br(htmlspecialchars($description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '</p>'
     . '<p><em>Aberto pelo assistente de chamados.</em></p>';
 
-$ticket = new Ticket();
-$id = $ticket->add([
+$snapshot = plugin_glpichatbot_messages_snapshot();
+$ticket   = new Ticket();
+$id       = $ticket->add([
     'name'                => $title,
     'content'             => $content,
     'type'                => $type,
@@ -70,13 +71,7 @@ $id = $ticket->add([
 ]);
 
 // Mensagens que o GLPI gerou (ex.: campo obrigatório do modelo de chamado)
-$messages = [];
-foreach ($_SESSION['MESSAGE_AFTER_REDIRECT'] ?? [] as $type_messages) {
-    foreach ((array) $type_messages as $message) {
-        $messages[] = trim(strip_tags((string) $message));
-    }
-}
-$_SESSION['MESSAGE_AFTER_REDIRECT'] = [];
+$messages = plugin_glpichatbot_messages_since($snapshot);
 
 if (!$id) {
     plugin_glpichatbot_json([

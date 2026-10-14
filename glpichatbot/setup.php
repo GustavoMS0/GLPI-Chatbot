@@ -38,6 +38,9 @@ function plugin_init_glpichatbot()
 
     $PLUGIN_HOOKS['csrf_compliant']['glpichatbot'] = true;
 
+    // Configurar › Plugins › GLPI Chatbot (ícone de chave)
+    $PLUGIN_HOOKS['config_page']['glpichatbot'] = 'front/config.form.php';
+
     // Carregado em todas as telas; o próprio script só mostra o assistente
     // para usuários logados que podem abrir chamados.
     $PLUGIN_HOOKS['add_javascript']['glpichatbot'] = ['js/chatbot.js'];
@@ -90,14 +93,24 @@ function plugin_glpichatbot_check_config($verbose = false)
     return true;
 }
 
-// O plugin não cria tabelas nem configurações.
+// O plugin não cria tabelas: guarda só as suas opções na configuração do GLPI (glpi_configs).
 function plugin_glpichatbot_install()
 {
+    $current  = Config::getConfigurationValues('plugin:glpichatbot');
+    $defaults = [
+        // Ligado por padrão: mantém o comportamento das versões anteriores
+        'force_selfservice_redirect' => 1,
+    ];
+    $missing = array_diff_key($defaults, $current);
+    if ($missing !== []) {
+        Config::setConfigurationValues('plugin:glpichatbot', $missing);
+    }
     return true;
 }
 
 function plugin_glpichatbot_uninstall()
 {
+    Config::deleteConfigurationValues('plugin:glpichatbot', ['force_selfservice_redirect']);
     return true;
 }
 
