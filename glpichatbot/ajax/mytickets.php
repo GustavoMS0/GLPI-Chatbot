@@ -13,6 +13,11 @@ require_once __DIR__ . '/../inc/functions.php';
 
 Session::checkLoginUser();
 
+if (!Session::haveRight('ticket', READ)) {
+    plugin_glpichatbot_json(['error' => 'Acesso negado.'], 403);
+    return;
+}
+
 /** @var DBmysql $DB */
 global $DB;
 

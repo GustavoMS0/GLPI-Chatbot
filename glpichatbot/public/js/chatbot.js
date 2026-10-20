@@ -214,12 +214,13 @@
         let bottom = BASE_OFFSET;
         launcher.style.bottom = bottom + 'px';
 
-        const zone = window.innerHeight - 260; // só olha a parte de baixo da tela
+        const vHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const zone = vHeight - 260; // só olha a parte de baixo da tela
         const candidates = [];
         document.querySelectorAll(OBSTACLES).forEach((node) => {
             if (ui.panel.contains(node) || launcher.contains(node)) return;
             const rect = node.getBoundingClientRect();
-            if (rect.width === 0 || rect.height === 0 || rect.bottom < zone || rect.top > window.innerHeight) return;
+            if (rect.width === 0 || rect.height === 0 || rect.bottom < zone || rect.top > vHeight) return;
             const style = window.getComputedStyle(node);
             if (style.visibility === 'hidden' || style.display === 'none') return;
             candidates.push(rect);
@@ -229,7 +230,7 @@
             const mine = launcher.getBoundingClientRect();
             const hit = candidates.find((rect) => intersects(mine, rect, 6));
             if (!hit) break;
-            bottom = Math.min(window.innerHeight - mine.height - 10, window.innerHeight - hit.top + GAP);
+            bottom = Math.min(vHeight - mine.height - 10, vHeight - hit.top + GAP);
             launcher.style.bottom = bottom + 'px';
         }
 
@@ -251,6 +252,9 @@
             window.requestAnimationFrame(() => { scheduled = false; placeLauncher(); });
         };
         window.addEventListener('resize', schedule, { passive: true });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', schedule, { passive: true });
+        }
         window.addEventListener('scroll', schedule, { passive: true, capture: true });
         let timer = null;
         new MutationObserver((mutations) => {

@@ -20,6 +20,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     plugin_glpichatbot_json(['error' => 'Método não permitido.'], 405);
     return;
 }
+
+$csrf_token = $_SERVER['HTTP_X_GLPI_CSRF_TOKEN'] ?? ($_POST['_glpi_csrf_token'] ?? '');
+if (!Session::validateIDOR(['_glpi_csrf_token' => $csrf_token])) {
+    plugin_glpichatbot_json(['error' => 'Token CSRF inválido ou ausente.'], 403);
+    return;
+}
 if (!Session::haveRight('ticket', CREATE)) {
     plugin_glpichatbot_json(['error' => 'Você não tem permissão para abrir chamados.'], 403);
     return;
