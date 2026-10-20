@@ -41,10 +41,14 @@ function plugin_init_glpichatbot()
     // Configurar › Plugins › GLPI Chatbot (ícone de chave)
     $PLUGIN_HOOKS['config_page']['glpichatbot'] = 'front/config.form.php';
 
+    // GLPI 11 serve os arquivos estáticos a partir da pasta "public/" do plugin
+    // (URL sem o prefixo "public"); o GLPI 10 usa o caminho real a partir da raiz do plugin.
+    $prefix = version_compare(GLPI_VERSION, '11.0.0-dev', '>=') ? '' : 'public/';
+
     // Carregado em todas as telas; o próprio script só mostra o assistente
     // para usuários logados que podem abrir chamados.
-    $PLUGIN_HOOKS['add_javascript']['glpichatbot'] = ['js/chatbot.js'];
-    $PLUGIN_HOOKS['add_css']['glpichatbot']        = ['css/chatbot.css'];
+    $PLUGIN_HOOKS['add_javascript']['glpichatbot'] = [$prefix . 'js/chatbot.js'];
+    $PLUGIN_HOOKS['add_css']['glpichatbot']        = [$prefix . 'css/chatbot.css'];
 
     // Tela dedicada: Assistência › Assistente de chamados (interface padrão)
     $PLUGIN_HOOKS['menu_toadd']['glpichatbot'] = ['helpdesk' => 'PluginGlpichatbotMenu'];

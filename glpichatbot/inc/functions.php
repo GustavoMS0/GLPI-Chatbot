@@ -8,6 +8,10 @@
  * ------------------------------------------------------------------------
  */
 
+if (!defined('GLPI_ROOT')) {
+    include __DIR__ . '/../../../inc/includes.php';
+}
+
 /**
  * Escreve a resposta JSON. O chamador deve dar "return" logo depois
  * (o GLPI 11 monta a resposta HTTP após o script terminar; não use exit).
