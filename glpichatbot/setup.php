@@ -28,8 +28,8 @@
  * ------------------------------------------------------------------------
  */
 
-define('PLUGIN_GLPICHATBOT_VERSION', '1.1.0');
-define('PLUGIN_GLPICHATBOT_MIN_GLPI', '11.0.0');
+define('PLUGIN_GLPICHATBOT_VERSION', '1.1.1');
+define('PLUGIN_GLPICHATBOT_MIN_GLPI', '10.0.0');
 define('PLUGIN_GLPICHATBOT_MAX_GLPI', '11.0.99');
 
 function plugin_init_glpichatbot()

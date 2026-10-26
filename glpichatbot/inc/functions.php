@@ -151,7 +151,8 @@ function plugin_glpichatbot_categories(int $entity, int $type): array
             break;
         }
         $found = 0;
-        foreach ($DB->request(['SELECT' => ['id', 'name', 'itilcategories_id'], 'FROM' => $table, 'WHERE' => ['id' => array_values($missing)]]) as $row) {
+        $missing_where = ['id' => array_values($missing), getEntitiesRestrictCriteria($table, '', $entity, true)];
+        foreach ($DB->request(['SELECT' => ['id', 'name', 'itilcategories_id'], 'FROM' => $table, 'WHERE' => $missing_where]) as $row) {
             $nodes[(int) $row['id']] = [
                 'id'         => (int) $row['id'],
                 'parent'     => (int) $row['itilcategories_id'],

@@ -230,7 +230,7 @@
             const mine = launcher.getBoundingClientRect();
             const hit = candidates.find((rect) => intersects(mine, rect, 6));
             if (!hit) break;
-            bottom = Math.min(vHeight - mine.height - 10, vHeight - hit.top + GAP);
+            bottom = Math.min(100, Math.min(vHeight - mine.height - 10, vHeight - hit.top + GAP));
             launcher.style.bottom = bottom + 'px';
         }
 
@@ -241,7 +241,7 @@
             return;
         }
         ui.panel.style.bottom = (bottom + launcherHeight + 12) + 'px';
-        ui.panel.style.maxHeight = 'calc(100vh - ' + (bottom + launcherHeight + 30) + 'px)';
+        ui.panel.style.maxHeight = 'min(620px, calc(100vh - ' + (bottom + launcherHeight + 24) + 'px))';
     }
 
     function watchPlacement() {
@@ -268,7 +268,11 @@
     }
 
     function scrollDown() {
-        ui.messages.scrollTop = ui.messages.scrollHeight;
+        if (!ui || !ui.messages) return;
+        ui.messages.scrollTo({
+            top: ui.messages.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 
     function focusFirstAction() {

@@ -9,7 +9,9 @@
  * This file is part of GLPI Chatbot (GPLv3+).
  */
 
-// GLPI 11 inicializa o ambiente antes de executar os arquivos front/ dos plugins.
+if (!defined('GLPI_ROOT')) {
+    include __DIR__ . '/../../../inc/includes.php';
+}
 
 require_once __DIR__ . '/../inc/functions.php';
 
@@ -19,6 +21,8 @@ global $CFG_GLPI;
 Session::checkRight('config', UPDATE);
 
 if (isset($_POST['update'])) {
+    Session::checkCSRF($_POST);
+
     Config::setConfigurationValues('plugin:glpichatbot', [
         'force_selfservice_redirect' => empty($_POST['force_selfservice_redirect']) ? 0 : 1,
     ]);
