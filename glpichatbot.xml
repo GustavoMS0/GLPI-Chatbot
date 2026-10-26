@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <name>GLPI Chatbot</name>
+    <key>glpichatbot</key>
+    <state>stable</state>
+    <logo>https://raw.githubusercontent.com/GustavoMS0/GLPI-Chatbot/main/glpichatbot.png</logo>
+    <description>
+        <short>
+            <en>Interactive decision wizard and conversational ticket opener for GLPI.</en>
+            <pt>Assistente interativo de autoatendimento e abertura guiada de chamados para o GLPI.</pt>
+        </short>
+        <long>
+            <en>Floating and standalone interactive assistant that guides end-users through category trees, simplifies ticket creation, and reduces misclassified tickets in GLPI Service Desk.</en>
+            <pt>Widget flutuante e tela dedicada que guia o usuário final por fluxos de decisão para abertura e consulta de chamados de forma simplificada no Service Desk do GLPI.</pt>
+        </long>
+    </description>
+    <homepage>https://github.com/GustavoMS0/GLPI-Chatbot</homepage>
+    <download>https://github.com/GustavoMS0/GLPI-Chatbot/releases</download>
+    <issues>https://github.com/GustavoMS0/GLPI-Chatbot/issues</issues>
+    <readme>https://github.com/GustavoMS0/GLPI-Chatbot/blob/main/README.md</readme>
+    <authors>
+        <author>Gustavo Martins</author>
+    </authors>
+    <versions>
+        <version>
+            <num>1.1.1</num>
+            <compatibility>>=10.0.0 &lt;10.1.0</compatibility>
+            <download_url>https://github.com/GustavoMS0/GLPI-Chatbot/releases/download/v1.1.1/glpichatbot-1.1.1.zip</download_url>
+        </version>
+    </versions>
+    <langs>
+        <lang>pt_BR</lang>
+        <lang>en_GB</lang>
+    </langs>
+    <license>GPL-3.0-or-later</license>
+</root>
+

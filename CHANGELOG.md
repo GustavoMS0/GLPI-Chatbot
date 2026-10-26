@@ -1,20 +1,24 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.1] - 2026-10-26
 
 ### Adicionado
+- **Manifesto de Catálogo Oficial:** inclusão de `glpichatbot.xml` e ícone oficial `glpichatbot.png` para integração com o catálogo da comunidade e GLPI Marketplace.
 - **Página de configuração** (Configurar › Plugins › GLPI Chatbot) com a opção **Abrir o assistente como página inicial do autoatendimento** (ligada por padrão, mantendo o comportamento da 1.1.0).
 - Esqueleto de traduções em `locales/glpichatbot.pot`.
 - Verificação automática (GitHub Actions) da sintaxe do PHP 8.2/8.3 (`php -l`) e do JavaScript (`node --check`).
 
 ### Corrigido
+- Compatibilidade ampla com **GLPI 10.0** e superior com inclusão defensiva de inicializadores de sessão.
+- Reforço de segurança contra CSRF em `front/config.form.php` e isolamento de escopo de entidades em consultas hierárquicas de categorias.
+- Transições de tela aprimoradas e compatibilidade de `z-index` evitando sobreposição em modais nativos do GLPI.
 - O assistente oferecia e aceitava urgências desativadas em Configurar › Geral › Assistência (`urgency_mask`).
 - Abrir um chamado ou anexar um arquivo pelo assistente apagava todas as mensagens pendentes do GLPI na sessão; agora só as mensagens geradas pela própria operação são retiradas.
 - Falha ao vincular o anexo ao chamado não era detectada: agora o usuário é avisado e o documento órfão é removido.
 - "Consultar meus chamados" mostrava o erro técnico do banco de dados; agora o erro vai para o log do GLPI e o usuário vê uma mensagem genérica.
 
 ### Alterado
-- `front/chatbot.php` não inclui mais `inc/includes.php` (desnecessário no GLPI 11).
+- Suporte estendido a versões GLPI 10.0.0 a 10.0.99 no manifesto `setup.php`.
 - Removido o código não utilizado `src/Chatbot.php`.
 - Ações do GitHub fixadas por SHA de commit.
 
