@@ -7,7 +7,8 @@
  *
  * Abre o chamado em nome do usuário logado. Por usar a criação padrão do GLPI,
  * as regras de negócio, a atribuição pela categoria, os modelos de chamado e as
- * notificações funcionam normalmente. O token CSRF é validado pelo próprio GLPI.
+ * notificações funcionam normalmente. O token CSRF (cabeçalho X-Glpi-Csrf-Token)
+ * é validado pelo próprio GLPI antes deste script rodar (plugin csrf_compliant).
  *
  * This file is part of GLPI Chatbot (GPLv3+).
  */
@@ -21,11 +22,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     return;
 }
 
-$csrf_token = $_SERVER['HTTP_X_GLPI_CSRF_TOKEN'] ?? ($_POST['_glpi_csrf_token'] ?? '');
-if (!Session::validateIDOR(['_glpi_csrf_token' => $csrf_token])) {
-    plugin_glpichatbot_json(['error' => 'Token CSRF inválido ou ausente.'], 403);
-    return;
-}
 if (!Session::haveRight('ticket', CREATE)) {
     plugin_glpichatbot_json(['error' => 'Você não tem permissão para abrir chamados.'], 403);
     return;

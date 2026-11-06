@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2026-11-06
+
+### Corrigido
+- Abrir chamado pelo assistente falhava sempre com **"Token CSRF inválido ou ausente"** (HTTP 403): `ajax/create.php` validava o token com `Session::validateIDOR`, que verifica tokens IDOR e não CSRF. A verificação indevida foi removida; o token continua sendo validado pelo próprio GLPI (10 e 11) antes do endpoint rodar. ([#1](https://github.com/GustavoMS0/GLPI-Chatbot/issues/1))
+
 ## [1.1.1] - 2026-10-26
 
 ### Adicionado
