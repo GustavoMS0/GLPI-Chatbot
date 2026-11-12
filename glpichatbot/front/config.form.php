@@ -4,7 +4,7 @@
  * Configuração do plugin (Configurar › Plugins › GLPI Chatbot).
  *
  * Opções gravadas na configuração do GLPI (glpi_configs, contexto plugin:glpichatbot).
- * O token CSRF do formulário é validado pelo próprio GLPI 11.
+ * O formulário é protegido pelo CSRF nativo do GLPI (10, 11 e 12) e validação de mesma origem.
  *
  * This file is part of GLPI Chatbot (GPLv3+).
  */
@@ -21,7 +21,9 @@ global $CFG_GLPI;
 Session::checkRight('config', UPDATE);
 
 if (isset($_POST['update'])) {
-    Session::checkCSRF($_POST);
+    if (!plugin_glpichatbot_require_same_origin_post()) {
+        Html::displayErrorAndDie('Origem da requisição não permitida.', true);
+    }
 
     Config::setConfigurationValues('plugin:glpichatbot', [
         'force_selfservice_redirect' => empty($_POST['force_selfservice_redirect']) ? 0 : 1,

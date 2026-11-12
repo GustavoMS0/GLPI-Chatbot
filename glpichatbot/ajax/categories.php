@@ -19,6 +19,10 @@ if (!Session::haveRight('ticket', CREATE) && !Session::haveRight('ticket', READ)
 }
 
 $entity = plugin_glpichatbot_entity($_GET['entity'] ?? '');
+if ($entity < 0) {
+    plugin_glpichatbot_json(['error' => 'Entidade inválida ou não autorizada.'], 403);
+    return;
+}
 $type   = (int) ($_GET['type'] ?? 0);
 
 plugin_glpichatbot_json(array_values(plugin_glpichatbot_categories($entity, $type)));

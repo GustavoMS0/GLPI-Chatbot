@@ -34,7 +34,149 @@ function plugin_glpichatbot_config(): array
 {
     $values = Config::getConfigurationValues('plugin:glpichatbot');
     return [
-        'force_selfservice_redirect' => (bool) ($values['force_selfservice_redirect'] ?? 1),
+        'force_selfservice_redirect' => (bool) ($values['force_selfservice_redirect'] ?? 0),
+    ];
+}
+
+/**
+ * Validação de mesma origem para requisições POST.
+ * Compatível com GLPI 10, 11 e 12 (Sec-Fetch-Site ou Origin/Host).
+ */
+function plugin_glpichatbot_require_same_origin_post(): bool
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        http_response_code(405);
+        return false;
+    }
+
+    $fetch_site = strtolower(trim((string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '')));
+    if ($fetch_site !== '') {
+        $valid = ($fetch_site === 'same-origin');
+    } else {
+        $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+        $host   = (string) ($_SERVER['HTTP_HOST'] ?? '');
+
+        if ($origin === '' && isset($_SERVER['HTTP_REFERER'])) {
+            $origin = (string) $_SERVER['HTTP_REFERER'];
+        }
+
+        $origin_host = parse_url($origin, PHP_URL_HOST);
+        $origin_port = parse_url($origin, PHP_URL_PORT);
+
+        $expected_host = is_string($origin_host)
+            ? $origin_host . ($origin_port !== null ? ':' . $origin_port : '')
+            : '';
+
+        $valid = $origin !== ''
+            && $host !== ''
+            && hash_equals(strtolower($host), strtolower($expected_host));
+    }
+
+    if (!$valid) {
+        http_response_code(403);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Dicionário de internacionalização para a interface do assistente.
+ *
+ * @return array<string, string>
+ */
+function plugin_glpichatbot_i18n_strings(string $lang): array
+{
+    $is_en = str_starts_with(strtolower($lang), 'en');
+
+    if ($is_en) {
+        return [
+            'welcome'           => 'Hello, %s! How can I help you today?',
+            'welcome_anon'      => 'Hello! How can I help you today?',
+            'btn_open_ticket'   => '🎫 Open ticket',
+            'btn_my_tickets'    => '🔍 My tickets',
+            'choose_type'       => 'What type of ticket do you need to open?',
+            'choose_entity'     => 'For which entity/company is this request?',
+            'choose_category'   => 'Choose the category for your ticket:',
+            'no_categories'     => 'No categories available for this ticket type. Please contact IT or try another type.',
+            'ask_title'         => 'Briefly summarize what happened or what you need:',
+            'ph_title'          => 'Example: Unable to access the system...',
+            'ask_desc'          => 'Now provide more details to assist the support team:',
+            'ph_desc'           => 'Describe what you were doing, error messages, and any relevant details...',
+            'ask_urgency'       => 'What is the urgency of this ticket?',
+            'review_title'      => 'Please review the details before submitting:',
+            'btn_confirm'       => 'Confirm & open ticket',
+            'btn_cancel'        => 'Cancel',
+            'ticket_created'    => 'Ticket #%d created successfully!',
+            'btn_view_ticket'   => 'View ticket',
+            'btn_restart'       => '↺ Restart',
+            'btn_back'          => '← Back',
+            'filter_ph'         => 'Type to filter...',
+            'no_filter_results' => 'No options match your filter.',
+            'attach_file'       => '📎 Attach file (optional)',
+            'remove_file'       => 'Remove',
+            'file_too_large'    => 'File exceeds the maximum allowed size.',
+            'my_tickets_title'  => 'Here are your recent open tickets:',
+            'no_my_tickets'     => 'You currently have no open tickets.',
+            'error_generic'     => 'An error occurred. Please try again.',
+            'error_load_cat'    => 'Could not load categories.',
+            'error_submitting'  => 'Submitting ticket...',
+            'ticket_summary'    => 'Summary',
+            'ticket_details'    => 'Details',
+            'ticket_type'       => 'Type',
+            'ticket_category'   => 'Category',
+            'ticket_entity'     => 'Entity',
+            'ticket_urgency'    => 'Urgency',
+            'ticket_attachment' => 'Attachment',
+            'badge_assistant'   => 'Virtual Assistant',
+            'fullscreen'        => 'Toggle fullscreen',
+            'close'             => 'Close assistant',
+            'launcher_label'    => 'Open ticket',
+        ];
+    }
+
+    return [
+        'welcome'           => 'Olá, %s! Como posso te ajudar hoje?',
+        'welcome_anon'      => 'Olá! Como posso te ajudar hoje?',
+        'btn_open_ticket'   => '🎫 Abrir chamado',
+        'btn_my_tickets'    => '🔍 Consultar meus chamados',
+        'choose_type'       => 'Qual tipo de chamado você precisa abrir?',
+        'choose_entity'     => 'Em qual unidade/empresa é a solicitação?',
+        'choose_category'   => 'Escolha o assunto do chamado:',
+        'no_categories'     => 'Não há categorias disponíveis para este tipo de chamado. Fale com a TI ou tente o outro tipo.',
+        'ask_title'         => 'Descreva resumidamente o que aconteceu ou o que você precisa:',
+        'ph_title'          => 'Exemplo: Não consigo acessar o sistema...',
+        'ask_desc'          => 'Agora dê mais detalhes para ajudar o atendimento:',
+        'ph_desc'           => 'Conte o que você estava fazendo, se apareceu mensagem de erro...',
+        'ask_urgency'       => 'Qual é a urgência deste chamado?',
+        'review_title'      => 'Confira os dados antes de abrir o chamado:',
+        'btn_confirm'       => 'Confirmar abertura',
+        'btn_cancel'        => 'Cancelar',
+        'ticket_created'    => 'Chamado #%d aberto com sucesso!',
+        'btn_view_ticket'   => 'Ver chamado',
+        'btn_restart'       => '↺ Recomeçar',
+        'btn_back'          => '← Voltar',
+        'filter_ph'         => 'Digite para filtrar...',
+        'no_filter_results' => 'Nenhum resultado para o filtro.',
+        'attach_file'       => '📎 Anexar arquivo (opcional)',
+        'remove_file'       => 'Remover',
+        'file_too_large'    => 'O arquivo ultrapassa o tamanho máximo permitido.',
+        'my_tickets_title'  => 'Aqui estão seus chamados em andamento:',
+        'no_my_tickets'     => 'Você não possui chamados em andamento no momento.',
+        'error_generic'     => 'Ocorreu um erro. Por favor, tente novamente.',
+        'error_load_cat'    => 'Não foi possível carregar as categorias.',
+        'error_submitting'  => 'Abrindo chamado...',
+        'ticket_summary'    => 'Resumo',
+        'ticket_details'    => 'Detalhes',
+        'ticket_type'       => 'Tipo',
+        'ticket_category'   => 'Categoria',
+        'ticket_entity'     => 'Unidade',
+        'ticket_urgency'    => 'Urgência',
+        'ticket_attachment' => 'Anexo',
+        'badge_assistant'   => 'Assistente Virtual',
+        'fullscreen'        => 'Alternar tela cheia',
+        'close'             => 'Fechar assistente',
+        'launcher_label'    => 'Abrir chamado',
     ];
 }
 
@@ -93,14 +235,14 @@ function plugin_glpichatbot_messages_since(array $snapshot): array
 }
 
 /**
- * Entidade solicitada, se o usuário tiver acesso a ela; senão, a entidade ativa.
+ * Entidade solicitada, se o usuário tiver acesso a ela; senão, -1 (inválida).
  */
 function plugin_glpichatbot_entity($requested): int
 {
     if (is_numeric($requested) && (int) $requested >= 0 && Session::haveAccessToEntity((int) $requested)) {
         return (int) $requested;
     }
-    return (int) $_SESSION['glpiactive_entity'];
+    return -1;
 }
 
 /**

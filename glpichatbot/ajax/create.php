@@ -17,8 +17,8 @@ require_once __DIR__ . '/../inc/functions.php';
 
 Session::checkLoginUser();
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    plugin_glpichatbot_json(['error' => 'Método não permitido.'], 405);
+if (!plugin_glpichatbot_require_same_origin_post()) {
+    plugin_glpichatbot_json(['error' => 'Origem da requisição não permitida.'], 403);
     return;
 }
 
@@ -29,6 +29,10 @@ if (!Session::haveRight('ticket', CREATE)) {
 
 $type        = (int) ($_POST['type'] ?? 0);
 $entity      = plugin_glpichatbot_entity($_POST['entity'] ?? '');
+if ($entity < 0) {
+    plugin_glpichatbot_json(['error' => 'Entidade inválida ou não autorizada.'], 403);
+    return;
+}
 $category    = (int) ($_POST['category'] ?? 0);
 $title       = trim((string) ($_POST['title'] ?? ''));
 $description = trim((string) ($_POST['description'] ?? ''));

@@ -12,11 +12,11 @@ if (!defined('GLPI_ROOT')) {
 
 class PluginGlpichatbotMenu extends CommonGLPI
 {
-    public static $rightname = 'ticket';
+    public static string $rightname = 'ticket';
 
     public static function getTypeName($nb = 0): string
     {
-        return 'Assistente de chamados';
+        return __('Assistente de chamados', 'glpichatbot');
     }
 
     public static function getMenuName(): string

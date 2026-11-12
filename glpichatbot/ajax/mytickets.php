@@ -21,10 +21,11 @@ if (!Session::haveRight('ticket', READ)) {
 /** @var DBmysql $DB */
 global $DB;
 
-$uid     = (int) Session::getLoginUserID();
-$tickets = [];
+$uid             = (int) Session::getLoginUserID();
+$active_entities = array_map('intval', (array) ($_SESSION['glpiactiveentities'] ?? []));
+$tickets         = [];
 
-if ($uid > 0) {
+if ($uid > 0 && !empty($active_entities)) {
     try {
         $iterator = $DB->request([
             'SELECT' => [
@@ -45,6 +46,7 @@ if ($uid > 0) {
             'WHERE' => [
                 'glpi_tickets_users.users_id' => $uid,
                 'glpi_tickets_users.type'     => CommonITILActor::REQUESTER,
+                'glpi_tickets.entities_id'    => $active_entities,
                 'glpi_tickets.is_deleted'     => 0,
                 'NOT'                         => [
                     'glpi_tickets.status' => [Ticket::SOLVED, Ticket::CLOSED],

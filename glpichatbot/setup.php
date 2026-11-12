@@ -28,9 +28,9 @@
  * ------------------------------------------------------------------------
  */
 
-define('PLUGIN_GLPICHATBOT_VERSION', '1.1.2');
+define('PLUGIN_GLPICHATBOT_VERSION', '1.2.0');
 define('PLUGIN_GLPICHATBOT_MIN_GLPI', '10.0.0');
-define('PLUGIN_GLPICHATBOT_MAX_GLPI', '11.0.99');
+define('PLUGIN_GLPICHATBOT_MAX_GLPI', '12.0.99');
 
 function plugin_init_glpichatbot()
 {
@@ -102,8 +102,8 @@ function plugin_glpichatbot_install()
 {
     $current  = Config::getConfigurationValues('plugin:glpichatbot');
     $defaults = [
-        // Ligado por padrão: mantém o comportamento das versões anteriores
-        'force_selfservice_redirect' => 1,
+        // Desligado por padrão: não altera o fluxo do autoatendimento automaticamente
+        'force_selfservice_redirect' => 0,
     ];
     $missing = array_diff_key($defaults, $current);
     if ($missing !== []) {

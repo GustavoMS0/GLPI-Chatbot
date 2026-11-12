@@ -39,6 +39,38 @@
     let state = null;  // respostas da conversa atual
     let tree = null;   // árvore de categorias carregada
 
+    function t(key, fallback) {
+        return (boot && boot.i18n && boot.i18n[key]) || fallback;
+    }
+
+    function getTypeLabel(type) {
+        if (boot && boot.type_labels && boot.type_labels[type]) {
+            return boot.type_labels[type];
+        }
+        return TYPE_LABELS[type] || '';
+    }
+
+    function getUrgencies() {
+        const allowed = Array.isArray(boot && boot.urgencies) ? boot.urgencies : [2, 3, 4, 5];
+        const icons = { 1: '⚪', 2: '🟢', 3: '🟡', 4: '🟠', 5: '🔴' };
+        const isEn = Boolean(boot && boot.is_en);
+        const hints = {
+            1: isEn ? 'very low' : 'muito baixa',
+            2: isEn ? 'can wait' : 'pode esperar',
+            3: isEn ? 'hinders, but can work' : 'atrapalha, mas dá para trabalhar',
+            4: isEn ? 'stops my work' : 'impede o meu trabalho',
+            5: isEn ? 'stops multiple people or department' : 'para várias pessoas ou um setor',
+        };
+        if (boot && boot.urgency_names) {
+            return allowed.map((val) => ({
+                value: val,
+                label: (icons[val] || '') + ' ' + (boot.urgency_names[val] || ''),
+                hint: hints[val] || '',
+            }));
+        }
+        return URGENCIES.filter((u) => allowed.includes(u.value));
+    }
+
     // ------------------------------------------------------------ utilidades
     function el(tag, className, text) {
         const node = document.createElement(tag);
@@ -69,14 +101,18 @@
     async function postForm(url, fields) {
         const token = document.querySelector('meta[property="glpi:csrf_token"]');
         const body = (fields instanceof FormData) ? fields : new URLSearchParams(fields);
+        const headers = {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        };
+        // Compatível com GLPI 10 e 11 (onde o meta tag existe); no GLPI 12 o CSRF é via Sec-Fetch-Site
+        if (token && token.getAttribute('content')) {
+            headers['X-Glpi-Csrf-Token'] = token.getAttribute('content');
+        }
         const response = await fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-Glpi-Csrf-Token': token ? token.getAttribute('content') : '',
-            },
+            headers: headers,
             body: body,
         });
         let data = {};
@@ -84,7 +120,7 @@
         if (!response.ok) {
             let msg = data.error;
             if (msg === true && data.message) msg = data.message;
-            throw new Error(msg || 'Não foi possível abrir o chamado (HTTP ' + response.status + ').');
+            throw new Error(msg || t('error_generic', 'Não foi possível abrir o chamado (HTTP ' + response.status + ').'));
         }
         return data;
     }
@@ -97,8 +133,9 @@
             const parent = byId[node.parent] ? node.parent : 0;
             (children[parent] = children[parent] || []).push(node);
         });
+        const locale = (boot && boot.locale) || 'pt-BR';
         Object.values(children).forEach((items) => items.sort(
-            (a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base', numeric: true })
+            (a, b) => a.name.localeCompare(b.name, locale, { sensitivity: 'base', numeric: true })
         ));
         return { byId, children };
     }
@@ -127,21 +164,24 @@
         panel.hidden = !isPage;
 
         const header = el('header', 'glpichatbot-header');
+        const isEn = Boolean(boot && boot.is_en);
+        const headerTitle = isEn ? 'Ticket Assistant' : 'Assistente de chamados';
+        const headerSub = isEn ? 'Step-by-step guidance' : 'Vou te guiar passo a passo';
         const title = el('div', 'glpichatbot-title');
-        title.append(el('strong', null, 'Assistente de chamados'), el('small', null, 'Vou te guiar passo a passo'));
+        title.append(el('strong', null, headerTitle), el('small', null, headerSub));
         header.append(title);
 
         if (!isPage) {
             const full = el('a', 'glpichatbot-icon-btn', '⤢');
             full.href = PAGE_URL;
-            full.title = 'Abrir em tela cheia';
-            full.setAttribute('aria-label', 'Abrir em tela cheia');
+            full.title = isEn ? 'Open fullscreen' : 'Abrir em tela cheia';
+            full.setAttribute('aria-label', full.title);
             header.append(full);
         }
         const restart = el('button', 'glpichatbot-icon-btn', '↺');
         restart.type = 'button';
-        restart.title = 'Recomeçar';
-        restart.setAttribute('aria-label', 'Recomeçar');
+        restart.title = isEn ? 'Restart' : 'Recomeçar';
+        restart.setAttribute('aria-label', restart.title);
         header.append(restart);
         restart.addEventListener('click', start);
 
@@ -156,17 +196,19 @@
         } else {
             const close = el('button', 'glpichatbot-icon-btn', '✕');
             close.type = 'button';
-            close.title = 'Fechar';
-            close.setAttribute('aria-label', 'Fechar');
+            close.title = isEn ? 'Close' : 'Fechar';
+            close.setAttribute('aria-label', close.title);
             header.append(close);
             close.addEventListener('click', hide);
 
+            const launcherText = isEn ? 'Open ticket' : 'Abrir chamado';
+            const launcherTitle = isEn ? 'Open ticket with assistant' : 'Abrir chamado com o assistente';
             launcher = el('button', 'glpichatbot-launcher');
             launcher.type = 'button';
-            launcher.title = 'Abrir chamado com o assistente';
-            launcher.setAttribute('aria-label', 'Abrir chamado com o assistente');
+            launcher.title = launcherTitle;
+            launcher.setAttribute('aria-label', launcherTitle);
             launcher.setAttribute('aria-expanded', 'false');
-            launcher.append(el('span', 'glpichatbot-launcher-icon', '💬'), el('span', 'glpichatbot-launcher-text', 'Abrir chamado'));
+            launcher.append(el('span', 'glpichatbot-launcher-icon', '💬'), el('span', 'glpichatbot-launcher-text', launcherText));
             document.body.append(launcher, panel);
 
             launcher.addEventListener('click', () => (panel.hidden ? open() : hide()));
@@ -307,8 +349,8 @@
         if (options.length > FILTER_THRESHOLD) {
             filter = el('input', 'glpichatbot-filter');
             filter.type = 'search';
-            filter.placeholder = 'Digite para filtrar...';
-            filter.setAttribute('aria-label', 'Filtrar opções');
+            filter.placeholder = t('filter_ph', 'Digite para filtrar...');
+            filter.setAttribute('aria-label', t('filter_ph', 'Filtrar opções'));
             ui.actions.append(filter);
         }
 
@@ -328,10 +370,11 @@
 
         if (filter) {
             filter.addEventListener('input', () => {
-                const term = filter.value.trim().toLocaleLowerCase('pt-BR');
+                const locale = (boot && boot.locale) || 'pt-BR';
+                const term = filter.value.trim().toLocaleLowerCase(locale);
                 list.querySelectorAll('.glpichatbot-choice').forEach((button) => {
                     const fixed = button.classList.contains('glpichatbot-choice-nav');
-                    button.hidden = !fixed && term !== '' && !button.textContent.toLocaleLowerCase('pt-BR').includes(term);
+                    button.hidden = !fixed && term !== '' && !button.textContent.toLocaleLowerCase(locale).includes(term);
                 });
             });
         }
@@ -343,6 +386,7 @@
      */
     function ask(kind, { placeholder, min, max, value }, onSubmit) {
         clearActions();
+        const isEn = Boolean(boot && boot.is_en);
         const form = el('form', 'glpichatbot-input');
         const field = el(kind === 'textarea' ? 'textarea' : 'input', 'glpichatbot-field');
         if (kind !== 'textarea') field.type = 'text';
@@ -351,10 +395,10 @@
         field.maxLength = max;
         field.value = value || '';
         field.setAttribute('aria-label', placeholder);
-        const send = el('button', 'glpichatbot-send', 'Enviar');
+        const send = el('button', 'glpichatbot-send', isEn ? 'Send' : 'Enviar');
         send.type = 'submit';
         const error = el('div', 'glpichatbot-error');
-        const counter = el('div', 'glpichatbot-hint', kind === 'textarea' ? 'Ctrl+Enter para enviar' : '');
+        const counter = el('div', 'glpichatbot-hint', kind === 'textarea' ? (isEn ? 'Ctrl+Enter to send' : 'Ctrl+Enter para enviar') : '');
         form.append(field, send);
         ui.actions.append(form, error, counter);
 
@@ -383,14 +427,25 @@
         state = { type: 0, entity: boot.default_entity, category: 0, title: '', description: '', urgency: 0, editing: false };
         tree = null;
         ui.messages.replaceChildren();
-        bot('Olá, ' + boot.user + '! 👋 Como posso te ajudar hoje?');
+        const isEn = Boolean(boot && boot.is_en);
+        const welcomeMsg = isEn ? ('Hello, ' + boot.user + '! 👋 How can I help you today?') : ('Olá, ' + boot.user + '! 👋 Como posso te ajudar hoje?');
+        bot(welcomeMsg);
         askIntent();
     }
 
     function askIntent() {
+        const isEn = Boolean(boot && boot.is_en);
         choices([
-            { label: '🆕 Abrir um chamado', hint: 'relatar problema ou fazer solicitação', value: 'create' },
-            { label: '🔍 Consultar meus chamados', hint: 'ver chamados em andamento', value: 'list' },
+            {
+                label: isEn ? '🆕 Open a ticket' : '🆕 Abrir um chamado',
+                hint: isEn ? 'report issue or make request' : 'relatar problema ou fazer solicitação',
+                value: 'create'
+            },
+            {
+                label: isEn ? '🔍 View my tickets' : '🔍 Consultar meus chamados',
+                hint: isEn ? 'check open tickets' : 'ver chamados em andamento',
+                value: 'list'
+            },
         ], (intent) => {
             if (intent === 'create') askType();
             else listTickets();
@@ -398,25 +453,26 @@
     }
 
     async function listTickets() {
-        const waiting = bot('Buscando seus chamados abertos…');
+        const isEn = Boolean(boot && boot.is_en);
+        const waiting = bot(isEn ? 'Fetching your open tickets…' : 'Buscando seus chamados abertos…');
         waiting.classList.add('glpichatbot-msg-wait');
         try {
             const list = await getJSON(URLS.mytickets);
             waiting.remove();
 
             if (list.length === 0) {
-                bot('Você não tem nenhum chamado em andamento no momento. 🎉');
+                bot(isEn ? 'You currently have no open tickets. 🎉' : 'Você não tem nenhum chamado em andamento no momento. 🎉');
                 choices([
-                    { label: '🆕 Abrir um chamado', value: 'create' },
-                    { label: '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
+                    { label: isEn ? '🆕 Open a ticket' : '🆕 Abrir um chamado', value: 'create' },
+                    { label: isEn ? '✕ Close' : '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
                 ], (value) => {
                     if (value === 'create') askType();
-                    else cancel('Tudo bem. Quando precisar, é só me chamar. 🙂');
+                    else cancel(isEn ? 'All set. Whenever you need, just message me. 🙂' : 'Tudo bem. Quando precisar, é só me chamar. 🙂');
                 });
                 return;
             }
 
-            bot('Aqui estão seus últimos chamados em andamento:');
+            bot(isEn ? 'Here are your recent open tickets:' : 'Aqui estão seus últimos chamados em andamento:');
 
             const card = el('div', 'glpichatbot-tickets-list');
             list.forEach((t) => {
@@ -431,7 +487,7 @@
                 );
 
                 const title = el('div', 'glpichatbot-ticket-title', t.name);
-                const date = el('div', 'glpichatbot-ticket-date', 'Aberto em: ' + t.date_short);
+                const date = el('div', 'glpichatbot-ticket-date', (isEn ? 'Opened on: ' : 'Aberto em: ') + t.date_short);
 
                 item.append(header, title, date);
                 card.append(item);
@@ -440,19 +496,19 @@
             scrollDown();
 
             choices([
-                { label: '🆕 Abrir um novo chamado', value: 'create' },
-                { label: '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
+                { label: isEn ? '🆕 Open a new ticket' : '🆕 Abrir um novo chamado', value: 'create' },
+                { label: isEn ? '✕ Close' : '✕ Sair', value: 'cancel', className: 'glpichatbot-choice-nav' },
             ], (value) => {
                 if (value === 'create') askType();
-                else cancel('Pronto. Quando precisar de algo, é só me chamar. 🙂');
+                else cancel(isEn ? 'Done. Whenever you need anything, just call me. 🙂' : 'Pronto. Quando precisar de algo, é só me chamar. 🙂');
             });
 
         } catch (e) {
             waiting.remove();
-            bot('Não consegui buscar seus chamados. Erro: ' + e.message);
+            bot((isEn ? 'Could not fetch your tickets: ' : 'Não consegui buscar seus chamados. Erro: ') + e.message);
             choices([
-                { label: 'Tentar novamente', value: 'retry' },
-                { label: '⬅ Voltar', value: 'back', className: 'glpichatbot-choice-nav' },
+                { label: isEn ? 'Try again' : 'Tentar novamente', value: 'retry' },
+                { label: isEn ? '⬅ Back' : '⬅ Voltar', value: 'back', className: 'glpichatbot-choice-nav' },
             ], (value) => {
                 if (value === 'retry') listTickets();
                 else start();
@@ -461,10 +517,19 @@
     }
 
     function askType() {
-        bot('É um problema (algo parou de funcionar) ou uma solicitação (um pedido)?');
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'Is it a problem (something broke) or a request (an inquiry or service)?' : 'É um problema (algo parou de funcionar) ou uma solicitação (um pedido)?');
         choices([
-            { label: '🔧 Problema', hint: 'algo quebrou ou parou de funcionar', value: 1 },
-            { label: '📋 Solicitação', hint: 'um pedido, acesso, compra, dúvida', value: 2 },
+            {
+                label: '🔧 ' + getTypeLabel(1),
+                hint: isEn ? 'something broke or stopped working' : 'algo quebrou ou parou de funcionar',
+                value: 1
+            },
+            {
+                label: '📋 ' + getTypeLabel(2),
+                hint: isEn ? 'request, access, equipment, question' : 'um pedido, acesso, compra, dúvida',
+                value: 2
+            },
         ], (type) => {
             state.type = type;
             askEntity();
@@ -472,12 +537,13 @@
     }
 
     function askEntity() {
+        const isEn = Boolean(boot && boot.is_en);
         if (boot.entities.length <= 1) {
             state.entity = boot.entities.length ? boot.entities[0].id : boot.default_entity;
             loadTree();
             return;
         }
-        bot('Para qual unidade é o chamado?');
+        bot(isEn ? 'For which entity/company is this ticket?' : 'Para qual unidade é o chamado?');
         choices(boot.entities.map((e) => ({ label: e.name, value: e.id })), (entity) => {
             state.entity = entity;
             loadTree();
@@ -485,7 +551,8 @@
     }
 
     async function loadTree() {
-        const waiting = bot('Carregando as opções…');
+        const isEn = Boolean(boot && boot.is_en);
+        const waiting = bot(isEn ? 'Loading options…' : 'Carregando as opções…');
         waiting.classList.add('glpichatbot-msg-wait');
         try {
             const list = await getJSON(URLS.categories + '?' + new URLSearchParams({ entity: state.entity, type: state.type }));
@@ -493,29 +560,34 @@
             tree = buildTree(list);
         } catch (e) {
             waiting.remove();
-            bot('Não consegui carregar as categorias. Tente novamente em instantes.');
-            choices([{ label: 'Tentar novamente', value: 'retry' }], loadTree);
+            bot(isEn ? 'Could not load categories. Please try again shortly.' : 'Não consegui carregar as categorias. Tente novamente em instantes.');
+            choices([{ label: isEn ? 'Try again' : 'Tentar novamente', value: 'retry' }], loadTree);
             return;
         }
         if (!(tree.children[0] || []).length) {
-            bot('Não há categorias disponíveis para este tipo de chamado. Fale com a TI ou tente o outro tipo.');
-            choices([{ label: '↺ Recomeçar', value: 'restart' }], start);
+            bot(isEn ? 'No categories available for this ticket type. Please contact IT or try the other type.' : 'Não há categorias disponíveis para este tipo de chamado. Fale com a TI ou tente o outro tipo.');
+            choices([{ label: isEn ? '↺ Restart' : '↺ Recomeçar', value: 'restart' }], start);
             return;
         }
         askLevel(0);
     }
 
     function askLevel(parentId) {
+        const isEn = Boolean(boot && boot.is_en);
         const items = tree.children[parentId] || [];
         const depth = categoryPath(parentId) ? categoryPath(parentId).split(' › ').length : 0;
-        bot(depth === 0 ? 'Qual área pode te ajudar?' : depth === 1 ? 'Sobre qual assunto?' : 'Qual opção descreve melhor?');
+        const q0 = isEn ? 'Which area can help you?' : 'Qual área pode te ajudar?';
+        const q1 = isEn ? 'About what topic?' : 'Sobre qual assunto?';
+        const q2 = isEn ? 'Which option describes it best?' : 'Qual opção descreve melhor?';
+        bot(depth === 0 ? q0 : depth === 1 ? q1 : q2);
 
         const options = items.map((node) => ({ label: node.name, value: node.id }));
         const parent = tree.byId[parentId];
         if (parent && parent.selectable) {
-            options.push({ label: 'Outro assunto de ' + parent.name, value: 'here', className: 'glpichatbot-choice-nav' });
+            const otherText = isEn ? 'Other in ' + parent.name : 'Outro assunto de ' + parent.name;
+            options.push({ label: otherText, value: 'here', className: 'glpichatbot-choice-nav' });
         }
-        options.push({ label: '⬅ Voltar', value: 'back', className: 'glpichatbot-choice-nav' });
+        options.push({ label: isEn ? '⬅ Back' : '⬅ Voltar', value: 'back', className: 'glpichatbot-choice-nav' });
 
         choices(options, (value) => {
             if (value === 'back') {
@@ -544,26 +616,29 @@
     }
 
     function askTitle() {
-        bot('Resuma em uma frase. Ex.: "Impressora do 2º andar atolando papel".');
-        ask('text', { placeholder: 'Resumo do chamado', min: 3, max: 250, value: state.title }, (text) => {
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'Briefly summarize what happened. Ex.: "2nd floor printer paper jam".' : 'Resuma em uma frase. Ex.: "Impressora do 2º andar atolando papel".');
+        ask('text', { placeholder: isEn ? 'Ticket summary' : 'Resumo do chamado', min: 3, max: 250, value: state.title }, (text) => {
             state.title = text;
             state.editing ? summary() : askDescription();
         });
     }
 
     function askDescription() {
-        bot('Agora conte os detalhes: o que aconteceu, desde quando, onde e se mais alguém é afetado.');
-        ask('textarea', { placeholder: 'Detalhes do chamado', min: 3, max: 20000, value: state.description }, (text) => {
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'Now provide the details: what happened, since when, where, and who is affected.' : 'Agora conte os detalhes: o que aconteceu, desde quando, onde e se mais alguém é afetado.');
+        ask('textarea', { placeholder: isEn ? 'Ticket details' : 'Detalhes do chamado', min: 3, max: 20000, value: state.description }, (text) => {
             state.description = text;
             state.editing ? summary() : askAttachment();
         });
     }
 
     function askAttachment() {
-        bot('Deseja anexar algum arquivo ou imagem (ex.: print do erro, PDF)?');
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'Would you like to attach any file or image (e.g. error screenshot, PDF)?' : 'Deseja anexar algum arquivo ou imagem (ex.: print do erro, PDF)?');
         choices([
-            { label: '📎 Anexar arquivo', value: 'attach' },
-            { label: '➡️ Pular esta etapa', value: 'skip' },
+            { label: isEn ? '📎 Attach file' : '📎 Anexar arquivo', value: 'attach' },
+            { label: isEn ? '➡️ Skip this step' : '➡️ Pular esta etapa', value: 'skip' },
         ], (val) => {
             if (val === 'skip') {
                 state.file = null;
@@ -575,7 +650,7 @@
                 input.onchange = () => {
                     if (input.files && input.files[0]) {
                         state.file = input.files[0];
-                        bot('📎 Arquivo selecionado: ' + state.file.name);
+                        bot((isEn ? '📎 Selected file: ' : '📎 Arquivo selecionado: ') + state.file.name);
                     }
                     state.editing ? summary() : askUrgency();
                 };
@@ -585,37 +660,38 @@
     }
 
     function askUrgency() {
-        bot('Qual a urgência?');
-        // Só as urgências permitidas na configuração do GLPI (urgency_mask)
-        const allowed = Array.isArray(boot.urgencies) ? boot.urgencies : [];
-        const options = URGENCIES.filter((u) => allowed.includes(u.value));
-        choices(options.length ? options : URGENCIES.filter((u) => u.value === 3), (urgency) => {
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'What is the urgency?' : 'Qual a urgência?');
+        const options = getUrgencies();
+        choices(options.length ? options : [{ value: 3, label: '🟡 Medium', hint: '' }], (urgency) => {
             state.urgency = urgency;
             summary();
         });
     }
 
     function summary() {
+        const isEn = Boolean(boot && boot.is_en);
         state.editing = false;
-        bot('Confira o seu chamado:');
+        bot(isEn ? 'Review your ticket details:' : 'Confira o seu chamado:');
         const card = el('dl', 'glpichatbot-summary');
+        const urgLabel = (getUrgencies().find((u) => u.value === state.urgency) || {}).label || '';
         const rows = [
-            ['Tipo', TYPE_LABELS[state.type]],
-            boot.entities.length > 1 ? ['Unidade', entityName(state.entity)] : null,
-            ['Categoria', categoryPath(state.category)],
-            ['Resumo', state.title],
-            ['Detalhes', state.description.length > 300 ? state.description.slice(0, 300) + '…' : state.description],
-            state.file ? ['Anexo', state.file.name] : null,
-            ['Urgência', (URGENCIES.find((u) => u.value === state.urgency) || {}).label],
+            [isEn ? 'Type' : 'Tipo', getTypeLabel(state.type)],
+            boot.entities.length > 1 ? [isEn ? 'Entity' : 'Unidade', entityName(state.entity)] : null,
+            [isEn ? 'Category' : 'Categoria', categoryPath(state.category)],
+            [isEn ? 'Summary' : 'Resumo', state.title],
+            [isEn ? 'Details' : 'Detalhes', state.description.length > 300 ? state.description.slice(0, 300) + '…' : state.description],
+            state.file ? [isEn ? 'Attachment' : 'Anexo', state.file.name] : null,
+            [isEn ? 'Urgency' : 'Urgência', urgLabel],
         ].filter(Boolean);
         rows.forEach(([label, value]) => card.append(el('dt', null, label), el('dd', null, value)));
         ui.messages.append(card);
         scrollDown();
 
         choices([
-            { label: '✅ Abrir chamado', value: 'confirm', className: 'glpichatbot-choice-primary' },
-            { label: '✏️ Corrigir', value: 'edit' },
-            { label: '✕ Cancelar', value: 'cancel', className: 'glpichatbot-choice-nav' },
+            { label: '✅ ' + (isEn ? 'Open ticket' : 'Abrir chamado'), value: 'confirm', className: 'glpichatbot-choice-primary' },
+            { label: '✏️ ' + (isEn ? 'Edit' : 'Corrigir'), value: 'edit' },
+            { label: '✕ ' + (isEn ? 'Cancel' : 'Cancelar'), value: 'cancel', className: 'glpichatbot-choice-nav' },
         ], (value) => {
             if (value === 'confirm') submit();
             else if (value === 'edit') askEdit();
@@ -624,14 +700,15 @@
     }
 
     function askEdit() {
-        bot('O que você quer corrigir?');
+        const isEn = Boolean(boot && boot.is_en);
+        bot(isEn ? 'What would you like to edit?' : 'O que você quer corrigir?');
         choices([
-            { label: 'Tipo e categoria', value: 'category' },
-            { label: 'Resumo', value: 'title' },
-            { label: 'Detalhes', value: 'description' },
-            { label: 'Anexo', value: 'file' },
-            { label: 'Urgência', value: 'urgency' },
-            { label: '⬅ Voltar ao resumo', value: 'back', className: 'glpichatbot-choice-nav' },
+            { label: isEn ? 'Type and category' : 'Tipo e categoria', value: 'category' },
+            { label: isEn ? 'Summary' : 'Resumo', value: 'title' },
+            { label: isEn ? 'Details' : 'Detalhes', value: 'description' },
+            { label: isEn ? 'Attachment' : 'Anexo', value: 'file' },
+            { label: isEn ? 'Urgency' : 'Urgência', value: 'urgency' },
+            { label: isEn ? '⬅ Back to summary' : '⬅ Voltar ao resumo', value: 'back', className: 'glpichatbot-choice-nav' },
         ], (value) => {
             state.editing = true;
             if (value === 'category') askType();
@@ -644,12 +721,15 @@
     }
 
     function cancel(customMsg) {
-        bot(typeof customMsg === 'string' ? customMsg : 'Tudo bem, nada foi aberto. Quando precisar, é só me chamar. 🙂');
-        choices([{ label: 'Início', value: 'restart' }], start);
+        const isEn = Boolean(boot && boot.is_en);
+        const defaultMsg = isEn ? 'Alright, nothing was submitted. Whenever you need, just message me. 🙂' : 'Tudo bem, nada foi aberto. Quando precisar, é só me chamar. 🙂';
+        bot(typeof customMsg === 'string' ? customMsg : defaultMsg);
+        choices([{ label: isEn ? 'Home' : 'Início', value: 'restart' }], start);
     }
 
     async function submit() {
-        const waiting = bot('Abrindo o seu chamado…');
+        const isEn = Boolean(boot && boot.is_en);
+        const waiting = bot(isEn ? 'Opening your ticket…' : 'Abrindo o seu chamado…');
         waiting.classList.add('glpichatbot-msg-wait');
         try {
             const formData = new FormData();
@@ -667,11 +747,11 @@
             done(result.id, result.warning);
         } catch (e) {
             waiting.remove();
-            bot('Não consegui abrir o chamado: ' + e.message);
+            bot((isEn ? 'Could not open ticket: ' : 'Não consegui abrir o chamado: ') + e.message);
             choices([
-                { label: 'Tentar novamente', value: 'retry' },
-                { label: '✏️ Corrigir', value: 'edit' },
-                { label: '✕ Cancelar', value: 'cancel', className: 'glpichatbot-choice-nav' },
+                { label: isEn ? 'Try again' : 'Tentar novamente', value: 'retry' },
+                { label: '✏️ ' + (isEn ? 'Edit' : 'Corrigir'), value: 'edit' },
+                { label: '✕ ' + (isEn ? 'Cancel' : 'Cancelar'), value: 'cancel', className: 'glpichatbot-choice-nav' },
             ], (value) => {
                 if (value === 'retry') submit();
                 else if (value === 'edit') askEdit();
@@ -681,13 +761,19 @@
     }
 
     function done(id, warning) {
-        bot('✅ Pronto! Seu chamado #' + id + ' foi aberto e já foi encaminhado para a equipe responsável. Você vai receber as atualizações por aqui e por e-mail.');
+        const isEn = Boolean(boot && boot.is_en);
+        const successMsg = isEn
+            ? ('✅ Done! Your ticket #' + id + ' was opened and forwarded to the team. You will receive updates here and by email.')
+            : ('✅ Pronto! Seu chamado #' + id + ' foi aberto e já foi encaminhado para a equipe responsável. Você vai receber as atualizações por aqui e por e-mail.');
+        bot(successMsg);
         if (warning) bot('⚠️ ' + warning);
         clearActions();
         const list = el('div', 'glpichatbot-choices');
-        const link = el('a', 'glpichatbot-choice glpichatbot-choice-primary', 'Ver chamado #' + id);
+        const viewText = isEn ? ('View ticket #' + id) : ('Ver chamado #' + id);
+        const link = el('a', 'glpichatbot-choice glpichatbot-choice-primary', viewText);
         link.href = boot.ticket_url + encodeURIComponent(id);
-        const again = el('button', 'glpichatbot-choice', 'Abrir outro chamado');
+        const againText = isEn ? 'Open another ticket' : 'Abrir outro chamado';
+        const again = el('button', 'glpichatbot-choice', againText);
         again.type = 'button';
         again.addEventListener('click', start);
         list.append(link, again);

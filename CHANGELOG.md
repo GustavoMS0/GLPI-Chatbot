@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.2.0] - 2026-11-12
+
+### Adicionado
+- **Compatibilidade oficial com GLPI 12.0** e PHP 8.3: tipagem estrita `public static string $rightname` em `PluginGlpichatbotMenu` corrigindo erro de compilação (HTTP 500) do GLPI 12.
+- **Internacionalização completa (i18n):** suporte nativo a inglês (`en_GB` / `en_US`) e português (`pt_BR`) com detecção automática do idioma da sessão, internacionalização dos fluxos do assistente e uso das nomenclaturas nativas do GLPI para tipos de chamado (`Ticket::getTicketTypeName`) e urgências (`Ticket::getUrgencyName`). ([#2](https://github.com/GustavoMS0/GLPI-Chatbot/issues/2))
+- **Proteção Same-Origin / Sec-Fetch-Site:** validação defensiva de mesma origem para requisições POST em `ajax/create.php` e `front/config.form.php`.
+
+### Corrigido
+- **Salvar configurações:** removida a validação manual redundante de CSRF em `front/config.form.php`, que causava "A ação que você requisitou não é permitida" no GLPI 10/11 e erro de método ausente no GLPI 12.
+- **Validação estrita de entidades:** requisições com entidade não permitida ou inválida em `ajax/create.php` e `ajax/categories.php` agora retornam HTTP 403 em vez de assumir silenciosamente a entidade ativa.
+- **Isolamento de entidades em "Meus chamados":** `ajax/mytickets.php` filtra os chamados pelas entidades ativas na sessão (`$_SESSION['glpiactiveentities']`).
+- **CSRF no frontend:** envio condicional do cabeçalho `X-Glpi-Csrf-Token` apenas quando o meta tag estiver presente, mantendo compatibilidade com GLPI 10 e 11 e suportando a nova arquitetura do GLPI 12.
+
+### Alterado
+- Redirecionamento automático do autoatendimento (`force_selfservice_redirect`) agora vem desativado por padrão na instalação, evitando alteração inesperada na home do usuário.
+- Faixa de compatibilidade estendida até GLPI 12.0.99 no manifesto `setup.php` e `glpichatbot.xml`.
+
+### Agradecimentos
+- Agradecimento especial a [@hudsonoak](https://github.com/hudsonoak) pelos testes em ambiente institucional, validações no GLPI 12.0.1 com PHP 8.3 e pelo envio das correções de compatibilidade e melhorias de segurança incorporadas nesta versão.
+
 ## [1.1.2] - 2026-11-06
 
 ### Corrigido
